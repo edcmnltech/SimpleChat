@@ -1,15 +1,13 @@
-
 scalaVersion := "2.12.10" //downgrade due to gatling https://github.com/gatling/gatling/issues/3566
 
 val akkaVersion = "2.5.26"
 val akkaHttpVersion = "10.1.11"
 libraryDependencies += "com.typesafe.akka" %% "akka-http" % akkaHttpVersion
 libraryDependencies += "com.typesafe.akka" %% "akka-actor" % akkaVersion
-libraryDependencies += "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test
+libraryDependencies += "com.typesafe.akka" %% "akka-stream" % akkaVersion
 libraryDependencies += "com.lightbend.akka" %% "akka-stream-alpakka-slick" % "1.1.2"
 
 libraryDependencies += "com.typesafe" % "config" % "1.4.0"
-libraryDependencies += "io.netty" % "netty-build" % "26"
 
 val slickVersion = "3.3.2"
 libraryDependencies ++= Seq(
@@ -36,4 +34,5 @@ val gatlingVersion = "3.3.1"
 libraryDependencies += "io.gatling.highcharts" % "gatling-charts-highcharts" % gatlingVersion % "test"
 libraryDependencies += "io.gatling"            % "gatling-test-framework"    % gatlingVersion % "test"
 
-//enablePlugins(GatlingPlugin)
+libraryDependencies += "com.typesafe" % "config" % "1.4.0"
+libraryDependencies += "io.netty" % "netty-build" % "26"

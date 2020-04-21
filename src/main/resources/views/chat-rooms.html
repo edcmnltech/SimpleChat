@@ -1,0 +1,94 @@
+<html>
+<head>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js"
+            integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+          integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous"/>
+    <title>Chat</title>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <h3 class="mt-3">Available chat rooms: </h3>
+            <div class="overflow-auto mt-3" style="height:300px">
+                <ul id="chatrooms" class="list-group"></ul>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <form id="addRoomForm">
+                <div class="form-group mt-3">
+                    <h3>Add a chat room:</h3>
+                    <input type="text" class="form-control mt-3" id="chatroomname" placeholder="Chat room's name"/>
+                    <input type="text" class="form-control mt-3" id="nickname" placeholder="Creator's nickname"/>
+                    <input type="password" class="form-control mt-3" id="password" placeholder="Chat room's password"/>
+                    <button id="add" class="btn btn-success btn-lg btn-block mt-3">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script language="javascript">
+
+    var url = "http://0.0.0.0:8080"
+
+    var items = $("#chatrooms");
+    function reloadJson(){ $.getJSON(url+"/chatrooms", function(data){
+          $.each( data, function( key, val ) {
+          items.prepend( "<li class='list-group-item' id='" + key + "'><a href='chat-client.html?id="+val.id.value+"&name="+val.name.value+"'>" + val.name.value + "</a></li>" );
+          });
+    });
+    }
+    reloadJson();
+
+    var $add = $("#add");
+    var $chatroomname = $("#chatroomname");
+    var $nickname = $("#nickname");
+    $add.removeAttr();
+
+    $("#addRoomForm").submit(function(event){
+        event.preventDefault();
+        var post_url = url+"/chatrooms";
+        var pass = { value: $("#password").val() }
+        var aaa = {
+            "name": {
+                "value": $("#chatroomname").val()
+            },
+            "creator": {
+                "value": $("#nickname").val()
+            },
+            "password": {
+                "value": $("#password").val()
+            },
+            "id": {
+                "value": 0
+            }
+        }
+
+        $.ajax({
+            url: post_url,
+            type: 'post',
+            contentType: 'application/json',
+            success: function(result, status, xhr){
+                $("#chatrooms").fadeOut(500, function() {
+                    $chatroomname.text = "";
+                    $nickname.text = "";
+                    $("#chatrooms").empty();
+                    reloadJson();
+                    $("#chatrooms").fadeIn().delay(500);
+                });
+                console.log("Success saving of new chatroom");
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+               console.log("Error saving of new chatroom" + textStatus, errorThrown);
+            },
+            data: JSON.stringify(aaa)
+        });
+
+    });
+
+</script>
+</body>
+</html>
