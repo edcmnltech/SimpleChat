@@ -2,7 +2,6 @@ package com.simplechat.repository
 
 import java.time.OffsetDateTime
 
-import com.simplechat.actor.User.IncomingMessage
 import slick.basic.DatabasePublisher
 import slick.jdbc.MySQLProfile.api._
 import slick.lifted.{ProvenShape, TableQuery}
@@ -21,13 +20,6 @@ trait ChatMessageRepository extends ChatMessageTable { this: MySqlRepository =>
   def insert(chatMessage: ChatMessage)(implicit _ec: ExecutionContext = ec): Future[ChatMessage] = {
     val query = chatMessageTable returning chatMessageTable.map(_.id) += chatMessage
     db.run(query).map(_ => chatMessage)
-  }
-
-  def insertBulk(roomId: ChatRoomId)(chatMessages: Future[Seq[IncomingMessage]])(implicit _ec: ExecutionContext = ec): Future[Option[Int]] = {
-    chatMessages.flatMap { msg =>
-      val msgs = msg.map(i => ChatMessage(i.sender.value, i.text,  roomId))
-      db.run(chatMessageTable ++= msgs)
-    }
   }
 
 }

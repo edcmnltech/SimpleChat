@@ -1,18 +1,15 @@
 package com.simplechat.actor
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import com.simplechat.actor.ChatServerActor.{Broadcast, Join, Quit}
-import com.simplechat.actor.UserActor.ChatMessage
-import com.simplechat.netty.{AttrHelper, Network}
-import com.simplechat.repository.{ChatRoom, ChatRoomName}
-import io.netty.channel.Channel
-import io.netty.channel.group.ChannelGroup
+import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage
+import com.simplechat.netty.Network
 
 object ChatServerActor {
   sealed trait ServerMessage
-  case class Join(group: ChannelGroup, channel: Channel) extends ServerMessage
-  case class Quit(group: ChannelGroup, channel: Channel) extends ServerMessage
-  case class Broadcast(group: ChannelGroup, message: String, room: ChatRoomName) extends ServerMessage
+  case class Join(chatRoom: ActorRef, user: ActorRef) extends ServerMessage
+  case class Broadcast(chatRoom: ActorRef, message: String) extends ServerMessage
+  case class Quit(chatRoom: ActorRef, user: ActorRef) extends ServerMessage
 }
 
 class ChatServerActor extends Actor with ActorLogging {
@@ -29,25 +26,14 @@ class ChatServerActor extends Actor with ActorLogging {
   }
 
   override def receive: Receive = {
-    case Join(group, channel) =>
-      log.debug(s"WebSocket user: $channel joined the server.")
-      group.add(channel)
-      val userActorRef = context.actorOf(Props[UserActor])
-      AttrHelper.setUserActorRef(channel, userActorRef)
-      val username = AttrHelper.getUsername(channel)
-      val room = AttrHelper.getChatRoom(channel)
-      self ! Broadcast(group, s"${username.value} joined", room)
+    case Join(chatRoom, user) =>
+      chatRoom ! ChatRoomMessage.Join(user)
 
-    case Broadcast(group, message, chatRoom) =>
-      group.forEach { channel =>
-        if (AttrHelper.getChatRoom(channel) == chatRoom) {
-          val user: ActorRef = AttrHelper.getUserActorRef(channel)
-          user ! ChatMessage(channel, s"MODIFIED $message")
-        }
-      }
+    case Broadcast(chatRoom, message) =>
+      chatRoom ! ChatRoomMessage.Broadcast(message)
 
-    case Quit(group, channel) =>
-      log.debug(s"WebSocket user: $channel quit the server.")
-      group.remove(channel)
+    case Quit(_, _) =>
+      log.debug(s"WebSocket user quit the server.")
+      network.stop
   }
 }

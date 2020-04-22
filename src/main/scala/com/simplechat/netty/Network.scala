@@ -3,26 +3,23 @@ package com.simplechat.netty
 import java.net.{InetAddress, InetSocketAddress}
 
 import akka.actor.ActorContext
+import com.simplechat.actor.RoomChannelGroups
+import com.simplechat.adapter.RoomChannelGroupActor
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.group.DefaultChannelGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.{Channel, ChannelFuture}
 import io.netty.handler.logging.{LogLevel, LoggingHandler}
-import io.netty.util.concurrent.ImmediateEventExecutor
 
 object Network {
   val port = 8080
   val host = InetAddress.getByName("0.0.0.0")
   val address = new InetSocketAddress(host, port)
-  //TODO: move this to other place / object
-  val WS_PATH = "/ws"
 }
 
 class Network(context: ActorContext) {
-  val channelGroup = new DefaultChannelGroup("clients", ImmediateEventExecutor.INSTANCE)
   val eventLoopGroup = new NioEventLoopGroup()
-  val channelInitializer = new ChatServerInitializer(channelGroup, context)
+  val channelInitializer = new ChatServerInitializer(context)
   var channelFuture: ChannelFuture = _
   var channel: Channel = _
 
@@ -43,7 +40,7 @@ class Network(context: ActorContext) {
       override def run(): Unit = {
         if (channel != null) {
           channel.close()
-          channelGroup.close()
+          RoomChannelGroups.chatRooms.foreach(_.close())
           eventLoopGroup.shutdownGracefully()
         }
       }

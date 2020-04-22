@@ -1,25 +1,22 @@
 package com.simplechat.actor
 
-import akka.actor.{Actor, ActorLogging}
-import com.simplechat.actor.UserActor.{ChatMessage, Joined}
-import io.netty.channel.Channel
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
+import akka.actor.{Actor, ActorLogging, Props}
+import com.simplechat.actor.UserActor.Joined
+import com.simplechat.repository.ChatUsername
 
 object UserActor {
   sealed trait UserMessage
   case object Joined
-  case class ChatMessage(channel: Channel, msg: String)
+  case class ChatMessage(msg: String)
+
+  def props(username: ChatUsername) = Props(new UserActor(username))
 }
 
-class UserActor extends Actor with ActorLogging {
+class UserActor(username: ChatUsername) extends Actor with ActorLogging {
 
   override def receive: Receive = {
     case Joined =>
       log.debug("User client connected to WebSocket server")
-
-    case ChatMessage(channel, msg) =>
-      log.debug(msg)
-      channel.writeAndFlush(new TextWebSocketFrame(msg))
   }
 
 }
