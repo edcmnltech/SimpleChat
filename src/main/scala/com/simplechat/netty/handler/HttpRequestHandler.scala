@@ -26,6 +26,8 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
         if (request.uri().contains(UrlHelper.ROOM_PATH)) {
 
           val validChatRoom: ChatRoom = extractChatRoom(ctx, request)
+          //At this point, it should be guaranteed that every chat room has
+          //corresponding ChannelGroup
           val chatRoomChannelGroup = RoomChannelGroups.chatRooms.find(_.name() == validChatRoom.name.value).getOrElse(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
           val chatRoomActorRef = actorContext.actorOf(RoomChannelGroupActor.props(chatRoomChannelGroup))
           val chatUserActorRef = actorContext.actorOf(UserChannelActor.props(ctx.channel()))

@@ -5,13 +5,13 @@ import com.simplechat.actor.ChatServerActor.{Broadcast, Join, Quit}
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.netty.handler.codec.http.websocketx.{TextWebSocketFrame, WebSocketServerProtocolHandler}
 
-class ChatWebSocketFrameHandler(actorContext: ActorContext, chatRoom: ActorRef, user: ActorRef) extends SimpleChannelInboundHandler[TextWebSocketFrame] {
+class ChatWebSocketFrameHandler(actorContext: ActorContext, chatRoom: ActorRef, chatUser: ActorRef) extends SimpleChannelInboundHandler[TextWebSocketFrame] {
 
   val chatServer: ActorRef = actorContext.self
 
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     if (evt == WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-      chatServer ! Join(chatRoom, user)
+      chatServer ! Join(chatRoom, chatUser)
     } else {
       super.userEventTriggered(ctx, evt)
     }
@@ -22,7 +22,7 @@ class ChatWebSocketFrameHandler(actorContext: ActorContext, chatRoom: ActorRef, 
   }
 
   override def channelInactive(ctx: ChannelHandlerContext): Unit = {
-    chatServer ! Quit(chatRoom, user)
+    chatServer ! Quit(chatRoom, chatUser)
   }
 
 }

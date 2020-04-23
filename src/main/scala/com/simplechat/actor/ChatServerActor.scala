@@ -26,14 +26,16 @@ class ChatServerActor extends Actor with ActorLogging {
   }
 
   override def receive: Receive = {
-    case Join(chatRoom, user) =>
+    case Join(chatRoom, user) => {
       chatRoom ! ChatRoomMessage.Join(user)
+    }
 
-    case Broadcast(chatRoom, message) =>
+    case Broadcast(chatRoom, message) => {
       chatRoom ! ChatRoomMessage.Broadcast(message)
+    }
 
-    case Quit(_, _) =>
-      log.debug(s"WebSocket user quit the server.")
-      network.stop
+    case Quit(chatRoom, user) => {
+      chatRoom ! ChatRoomMessage.Quit(user)
+    }
   }
 }

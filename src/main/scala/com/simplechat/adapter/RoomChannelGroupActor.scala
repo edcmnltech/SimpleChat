@@ -13,6 +13,7 @@ object RoomChannelGroupActor {
   object ChatRoomMessage {
     case class Join(user: ActorRef) extends ChatRoomMessage
     case class Broadcast(msg: String) extends ChatRoomMessage
+    case class Quit(user: ActorRef) extends ChatRoomMessage
   }
 
   def props(channelGroup: ChannelGroup): Props = Props(new RoomChannelGroupActor(channelGroup))
@@ -21,14 +22,26 @@ object RoomChannelGroupActor {
 class RoomChannelGroupActor(channelGroup: ChannelGroup) extends Actor {
   override def receive: Receive = {
 
-    case ChatRoomMessage.Join(user) =>
-      user ! ChatUserMessage.GetUserChannel
+    case ChatRoomMessage.Join(user) => {
+      user ! ChatUserMessage.JoinRequest
+    }
 
-    case ChatUserMessage.UserChannel(channel) =>
+    case ChatUserMessage.JoinChannel(channel) => {
       channelGroup.add(channel)
       self ! Broadcast(Message.joined(channel.id().asShortText()))
+    }
 
-    case ChatRoomMessage.Broadcast(message) =>
+    case ChatRoomMessage.Quit(user) => {
+      user ! ChatUserMessage.QuitRequest
+    }
+
+    case ChatUserMessage.QuitChannel(channel) => {
+      channelGroup.remove(channel)
+      self ! Broadcast(Message.quit(channel.id().asShortText()))
+    }
+
+    case ChatRoomMessage.Broadcast(message) => {
       channelGroup.writeAndFlush(new TextWebSocketFrame(message))
+    }
   }
 }
