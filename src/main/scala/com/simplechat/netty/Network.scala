@@ -19,7 +19,7 @@ object Network {
 
 class Network(context: ActorContext) {
   val eventLoopGroup = new NioEventLoopGroup()
-  val channelInitializer = new ChatServerInitializer(context)
+  val channelInitializer = new ChatUserChannelInitializer(context)
   var channelFuture: ChannelFuture = _
   var channel: Channel = _
 

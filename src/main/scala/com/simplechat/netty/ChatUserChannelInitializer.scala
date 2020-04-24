@@ -6,7 +6,7 @@ import io.netty.channel.{Channel, ChannelInitializer}
 import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 import io.netty.handler.stream.ChunkedWriteHandler
 
-class ChatServerInitializer(context: ActorContext) extends ChannelInitializer[Channel] {
+class ChatUserChannelInitializer(context: ActorContext) extends ChannelInitializer[Channel] {
 
   override def initChannel(c: Channel): Unit = {
     val pipeline = c.pipeline()

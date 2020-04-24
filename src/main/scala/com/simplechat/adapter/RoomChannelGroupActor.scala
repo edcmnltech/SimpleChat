@@ -3,7 +3,7 @@ package com.simplechat.adapter
 import akka.actor.{Actor, ActorRef, Props}
 import com.simplechat.actor.Message
 import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage
-import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage.{Broadcast, Join}
+import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage.Broadcast
 import com.simplechat.adapter.UserChannelActor.ChatUserMessage
 import io.netty.channel.group.ChannelGroup
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
