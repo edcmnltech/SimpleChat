@@ -13,7 +13,7 @@ import io.netty.util.concurrent.GlobalEventExecutor
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends SimpleChannelInboundHandler[FullHttpRequest]
   with MySqlRepository
@@ -28,15 +28,15 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
 
           val validChatRoom: ChatRoom = extractChatRoom(ctx, request)
           val validChatUser: ChatUser = extractChatUser(ctx, request)
-          //At this point, it should be guaranteed that every chat room has
-          //corresponding ChannelGroup
+
           val chatRoomChannelGroup = RoomChannelGroups.chatRooms.find(_.name() == validChatRoom.name.value).getOrElse(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
-          val chatRoomActorRef = actorContext.actorOf(RoomChannelGroupActor.props(chatRoomChannelGroup))
+          val chatRoomActorProps = RoomChannelGroupActor.props(chatRoomChannelGroup)
+          val chatRoomActorRef = actorContext.actorOf(chatRoomActorProps)
           val chatUserActorRef = actorContext.actorOf(UserChannelActor.props(ctx.channel()))
 
-          replaceOldUserChannel(chatRoomChannelGroup, validChatUser)
-          addUsernameToChanne(ctx.channel(), validChatUser)
-          
+          duplicateChannelCheck(chatRoomChannelGroup, validChatUser, actorContext)
+          AttrHelper.setUsername(ctx.channel(), validChatUser.username)
+
           ctx.pipeline().addLast(new WebSocketServerProtocolHandler(request.uri()))
           ctx.pipeline().addLast(new ChatWebSocketFrameHandler(actorContext, chatRoomActorRef, chatUserActorRef))
           ctx.fireChannelRead(request.retain())
@@ -61,6 +61,8 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
     }
   }
 
+  override def channelUnregistered(ctx: ChannelHandlerContext): Unit = super.channelUnregistered(ctx)
+
   protected def extractChatUser(ctx: ChannelHandlerContext, request: FullHttpRequest): ChatUser = {
     val chatUser = UrlHelper.getChatUsername(request.uri())
     Await.result(selectByUsername(chatUser), 2.seconds)
@@ -71,23 +73,18 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
     Await.result(selectByRoomName(chatRoom), 2.seconds)
   }
 
-  protected def replaceOldUserChannel(chatRoomChannelGroup: ChannelGroup, user: ChatUser): Unit = {
-    var channelToRemove: Option[Channel] = None
+  protected def duplicateChannelCheck(chatRoomChannelGroup: ChannelGroup, user: ChatUser, actorContext: ActorContext): Unit = {
     chatRoomChannelGroup.forEach{ c =>
-      Try(AttrHelper.getUsername(c)) match {
-        case Failure(_) => channelToRemove
-        case Success(_) => channelToRemove = Some(c)
+      Try(AttrHelper.getUsername(c) == user.username) match {
+        case Success(true) =>
+          println(s"there exist a dup user ${AttrHelper.getUsername(c) == user.username}")
+          val futureClose = c.close()
+          futureClose.addListener((f: ChannelFuture) => {
+            if (f.isDone) chatRoomChannelGroup.remove(c)
+          })
+        case _ => //nothing to do
       }
     }
-
-    channelToRemove.map { c =>
-      chatRoomChannelGroup.remove(c)
-      c.close()
-    }
-  }
-
-  protected def addUsernameToChanne(channel: Channel, user: ChatUser): Unit = {
-    AttrHelper.setUsername(channel, user.username)
   }
 
 }

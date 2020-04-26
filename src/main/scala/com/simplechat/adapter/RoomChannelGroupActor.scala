@@ -1,6 +1,6 @@
 package com.simplechat.adapter
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, PoisonPill, Props}
 import com.simplechat.actor.Message
 import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage
 import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage.Broadcast
@@ -35,8 +35,9 @@ class RoomChannelGroupActor(channelGroup: ChannelGroup) extends Actor {
       user ! ChatUserMessage.QuitRequest
     }
 
-    case ChatUserMessage.QuitChannel(channel) => {
+    case ChatUserMessage.QuitChannel(channel, user) => {
       channelGroup.remove(channel)
+      user ! PoisonPill
       self ! Broadcast(Message.quit(channel.id().asShortText()))
     }
 
