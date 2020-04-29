@@ -1,26 +1,30 @@
 package com.simplechat.actor
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import com.simplechat.protocol.ChatRoomProtocol._
+import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
+import com.simplechat.protocol.ChatProtocol._
 import com.simplechat.repository.ChatUsername
 
 object UserActor {
-  def props(connActorProps: Props, username: ChatUsername) = Props(new UserActor(connActorProps, username))
+  def props(username: ChatUsername) = Props(new UserActor(username))
 }
 
-class UserActor(connActorProps: Props, username: ChatUsername) extends Actor with ActorLogging {
+class UserActor(username: ChatUsername) extends Actor with ActorLogging {
 
-  val network: ActorRef = context.actorOf(connActorProps)
+  override def receive: Receive = join
 
-  override def receive: Receive = {
-    case Join =>
+  private def join: Receive = {
+    case Join(connector) =>
       sender ! Joined(self, username)
-      context.become(joined)
+      context.become(connected(connector))
   }
 
-  private def joined: Receive = {
-    case broadcast @ Broadcast(_) =>
-      network ! broadcast
+  private def connected(connector: ActorRef): Receive = {
+    case IncomingMessage(msg) =>
+      connector ! OutgoingMessage(msg)
+    case Reconnect =>
+      context.become(join)
+    case Quit(_) =>
+      connector ! PoisonPill
+      self ! PoisonPill
   }
-
 }

@@ -4,7 +4,7 @@ import java.io.{File, RandomAccessFile}
 
 import akka.actor.ActorContext
 import com.simplechat.actor.{RoomChannelGroups, UserActor}
-import com.simplechat.adapter.{ConnectionActor, RoomChannelGroupActor}
+import com.simplechat.adapter.{ConnectionActor, ChatRooms}
 import com.simplechat.netty.{AttrHelper, UrlHelper}
 import com.simplechat.repository._
 import io.netty.channel._
@@ -13,7 +13,6 @@ import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.stream.ChunkedNioFile
-import io.netty.util.concurrent.GlobalEventExecutor
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -33,17 +32,14 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
           val validChatRoom: ChatRoom = extractChatRoom(ctx, request)
           val validChatUser: ChatUser = extractChatUser(ctx, request)
 
-          val chatRoomChannelGroup = RoomChannelGroups.chatRoomGroupFor(validChatRoom.name)
-          val chatRoomActorRef = RoomChannelGroups.actorRefFor(validChatRoom.name)
+          val chatRoomActorRef = ChatRooms.actorRefFor(validChatRoom.name)
+          val userActorProps = UserActor.props(validChatUser.username)
 
-          val connActorProps = ConnectionActor.props(ctx.channel())
-          val userActorProps = UserActor.props(connActorProps, validChatUser.username)
-
-          duplicateChannelCheck(chatRoomChannelGroup, validChatUser, actorContext)
-          AttrHelper.setUsername(ctx.channel(), validChatUser.username)
+//          duplicateChannelCheck(chatRoomChannelGroup, validChatUser, actorContext)
+//          AttrHelper.setUsername(ctx.channel(), validChatUser.username)
 
           ctx.pipeline().addLast(new WebSocketServerProtocolHandler(request.uri()))
-          ctx.pipeline().addLast(new ChatWebSocketFrameHandler(chatRoomActorRef, userActorProps))
+          ctx.pipeline().addLast(new ChatWebSocketFrameHandler(chatRoomActorRef, userActorProps, validChatUser.username, actorContext))
           ctx.fireChannelRead(request.retain())
         } else {
           println("no chat room found in url.")

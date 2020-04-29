@@ -1,7 +1,6 @@
-package main.scala.com.simplechat
+package com.simplechat
 
 import akka.actor.{ActorSystem, Props}
-import akka.stream.ActorMaterializer
 import com.simplechat.actor.ChatServerActor
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -10,11 +9,11 @@ object Main extends App {
 
   def chat(): Unit = {
 
-    implicit val system: ActorSystem = ActorSystem("simple-chat-system")
-    implicit val materializer: ActorMaterializer = ActorMaterializer.create(system)
+    //val connectorSystem: ActorSystem = ActorSystem("connector-system")
+    val chatServer: ActorSystem = ActorSystem("chat-server")
     implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-    system.actorOf(Props[ChatServerActor])
+    chatServer.actorOf(Props[ChatServerActor])
 
   }
 
