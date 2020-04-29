@@ -13,18 +13,31 @@ class UserActor(username: ChatUsername) extends Actor with ActorLogging {
   override def receive: Receive = join
 
   private def join: Receive = {
-    case Join(connector) =>
-      sender ! Joined(self, username)
-      context.become(connected(connector))
+    case a: Joint =>
+      a match {
+        case Join(connector, replyTo) =>
+          println("joining...")
+          replyTo ! Joined(self, username)
+          context.become(connected(connector))
+
+        case Rejoin(connector, replyTo) =>
+          println("rejoining...")
+          replyTo ! Joined(self, username)
+          context.become(connected(connector))
+      }
+
   }
 
   private def connected(connector: ActorRef): Receive = {
     case IncomingMessage(msg) =>
       connector ! OutgoingMessage(msg)
-    case Reconnect =>
-      context.become(join)
     case Quit(_) =>
       connector ! PoisonPill
       self ! PoisonPill
+    case Reconnect(newConnector, replyTo) =>
+      println("reconnecting...")
+      connector ! PoisonPill
+      context.become(join)
+      self ! Rejoin(newConnector, replyTo)
   }
 }

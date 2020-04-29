@@ -1,6 +1,7 @@
 package com.simplechat.actor
 
 import akka.actor.{Actor, ActorLogging}
+import com.simplechat.adapter.ChatRooms
 import com.simplechat.netty.Network
 
 object ChatServerActor {
@@ -12,7 +13,7 @@ class ChatServerActor extends Actor with ActorLogging {
 
   override def preStart(): Unit = {
     network.start
-    RoomChannelGroups.create(context)
+    ChatRooms.create(context)
     log.debug("WebSocket server started.")
   }
 

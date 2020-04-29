@@ -1,7 +1,7 @@
 package com.simplechat.actor
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import com.simplechat.protocol.ChatProtocol._
+import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props, Terminated}
+import com.simplechat.protocol.ChatProtocol.{Reconnect, _}
 import com.simplechat.repository.ChatUsername
 
 import scala.collection.mutable
@@ -17,15 +17,24 @@ class ChatRoomActor() extends Actor with ActorLogging {
   override def receive: Receive = {
 
     case CreateUser(userProps, username, createConnector) => {
-      val newUser = context.actorOf(userProps, s"user_${username.value}")
-      val connector = createConnector(newUser)
-      newUser ! Join(connector)
+      checkDuplicate(username) match {
+        case Some((_, oldUser)) =>
+          val newConnector = createConnector(oldUser)
+          oldUser ! Reconnect(newConnector, self)
+        case None =>
+          val (newUser, newConnector) = creatttt(username, userProps, createConnector)
+          users += (username -> newUser)
+          newUser ! Join(newConnector, self)
+      }
     }
 
     case Joined(newUser, username) => {
-      users += (username -> newUser)
       context.watch(newUser)
       self ! IncomingMessage(Message.joined(username.value))
+    }
+
+    case Reconnected(_, username) => {
+      self ! IncomingMessage(Message.reconnected(username.value))
     }
 
     case broadcast @ IncomingMessage(_) => {
@@ -44,5 +53,15 @@ class ChatRoomActor() extends Actor with ActorLogging {
       }
     }
 
+  }
+
+  private def checkDuplicate(username: ChatUsername): Option[(ChatUsername, ActorRef)] = {
+    users.find(_._1 == username)
+  }
+
+  private def creatttt(username: ChatUsername, userProps: Props, createConnector: UserThenConnector): (ActorRef, ActorRef) = {
+    val newUser = context.actorOf(userProps, s"user_$username")
+    val connector = createConnector(newUser)
+    (newUser, connector)
   }
 }

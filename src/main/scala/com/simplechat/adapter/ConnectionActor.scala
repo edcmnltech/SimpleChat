@@ -15,6 +15,10 @@ class ConnectionActor(channel: Channel, username: ChatUsername, userActorRef: Ac
 
   override def receive: Receive = {
     case OutgoingMessage(msg) =>
-      channel.writeAndFlush(new TextWebSocketFrame(msg))
+      channel.writeAndFlush(new TextWebSocketFrame(s"${username.value}: $msg"))
+  }
+
+  override def postStop(): Unit = {
+    channel.close()
   }
 }

@@ -3,7 +3,7 @@ package com.simplechat.netty
 import java.net.{InetAddress, InetSocketAddress}
 
 import akka.actor.ActorContext
-import com.simplechat.actor.RoomChannelGroups
+import com.simplechat.adapter.ChatRooms
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
@@ -39,7 +39,7 @@ class Network(context: ActorContext) {
       override def run(): Unit = {
         if (channel != null) {
           channel.close()
-          RoomChannelGroups.close()
+          ChatRooms.close()
           eventLoopGroup.shutdownGracefully()
         }
       }

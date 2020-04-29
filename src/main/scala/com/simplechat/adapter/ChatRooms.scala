@@ -2,7 +2,7 @@ package com.simplechat.adapter
 
 import akka.actor.{ActorContext, ActorRef}
 import com.simplechat.actor.ChatRoomActor
-import com.simplechat.repository.ChatRoomName
+import com.simplechat.repository.{ChatRoomName, ChatUsername}
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.util.concurrent.GlobalEventExecutor
 

@@ -3,12 +3,12 @@ package com.simplechat.netty.handler
 import java.io.{File, RandomAccessFile}
 
 import akka.actor.ActorContext
-import com.simplechat.actor.{RoomChannelGroups, UserActor}
-import com.simplechat.adapter.{ConnectionActor, ChatRooms}
+import com.simplechat.actor.UserActor
+import com.simplechat.adapter.ChatRooms
 import com.simplechat.netty.{AttrHelper, UrlHelper}
 import com.simplechat.repository._
 import io.netty.channel._
-import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
+import io.netty.channel.group.ChannelGroup
 import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
 import io.netty.handler.ssl.SslHandler
@@ -32,11 +32,8 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
           val validChatRoom: ChatRoom = extractChatRoom(ctx, request)
           val validChatUser: ChatUser = extractChatUser(ctx, request)
 
-          val chatRoomActorRef = ChatRooms.actorRefFor(validChatRoom.name)
           val userActorProps = UserActor.props(validChatUser.username)
-
-//          duplicateChannelCheck(chatRoomChannelGroup, validChatUser, actorContext)
-//          AttrHelper.setUsername(ctx.channel(), validChatUser.username)
+          val chatRoomActorRef = ChatRooms.actorRefFor(validChatRoom.name)
 
           ctx.pipeline().addLast(new WebSocketServerProtocolHandler(request.uri()))
           ctx.pipeline().addLast(new ChatWebSocketFrameHandler(chatRoomActorRef, userActorProps, validChatUser.username, actorContext))

@@ -14,7 +14,7 @@ class ChatWebSocketFrameHandler(chatRoom: ActorRef, userProps: Props, username: 
     if (evt == WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE) {
       val createConnector: UserThenConnector = userActorRef => {
         val connActorProps = ConnectionActor.props(ctx.channel(), username)(userActorRef)
-        val connActorRef = actorContext.actorOf(connActorProps, s"connector_${username.value}")
+        val connActorRef = actorContext.actorOf(connActorProps, s"connector_${ctx.channel.id()}_${username.value}")
         AttrHelper.setUsername(ctx.channel(), username)
         connActorRef
       }
