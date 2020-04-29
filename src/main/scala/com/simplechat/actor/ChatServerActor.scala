@@ -1,15 +1,10 @@
 package com.simplechat.actor
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
-import com.simplechat.actor.ChatServerActor.{Broadcast, Join, Quit}
-import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage
+import akka.actor.{Actor, ActorLogging}
 import com.simplechat.netty.Network
 
 object ChatServerActor {
   sealed trait ServerMessage
-  case class Join(chatRoom: ActorRef, user: ActorRef) extends ServerMessage
-  case class Broadcast(chatRoom: ActorRef, message: String) extends ServerMessage
-  case class Quit(chatRoom: ActorRef, user: ActorRef) extends ServerMessage
 }
 
 class ChatServerActor extends Actor with ActorLogging {
@@ -17,6 +12,7 @@ class ChatServerActor extends Actor with ActorLogging {
 
   override def preStart(): Unit = {
     network.start
+    RoomChannelGroups.create(context)
     log.debug("WebSocket server started.")
   }
 
@@ -26,16 +22,6 @@ class ChatServerActor extends Actor with ActorLogging {
   }
 
   override def receive: Receive = {
-    case Join(chatRoom, user) => {
-      chatRoom ! ChatRoomMessage.Join(user)
-    }
-
-    case Broadcast(chatRoom, message) => {
-      chatRoom ! ChatRoomMessage.Broadcast(message)
-    }
-
-    case Quit(chatRoom, user) => {
-      chatRoom ! ChatRoomMessage.Quit(user)
-    }
+    case _ => println("empty receive chat server")
   }
 }

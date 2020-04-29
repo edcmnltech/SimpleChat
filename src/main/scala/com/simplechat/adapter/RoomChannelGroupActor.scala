@@ -1,48 +1,47 @@
 package com.simplechat.adapter
 
-import akka.actor.{Actor, ActorRef, PoisonPill, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import com.simplechat.actor.Message
-import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage
-import com.simplechat.adapter.RoomChannelGroupActor.ChatRoomMessage.Broadcast
-import com.simplechat.adapter.UserChannelActor.ChatUserMessage
-import io.netty.channel.group.ChannelGroup
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
+import com.simplechat.protocol.ChatRoomProtocol._
+
+import scala.collection.mutable.ListBuffer
 
 object RoomChannelGroupActor {
-  sealed trait ChatRoomMessage
-  object ChatRoomMessage {
-    case class Join(user: ActorRef) extends ChatRoomMessage
-    case class Broadcast(msg: String) extends ChatRoomMessage
-    case class Quit(user: ActorRef) extends ChatRoomMessage
-  }
-
-  def props(channelGroup: ChannelGroup): Props = Props(new RoomChannelGroupActor(channelGroup))
+  def props: Props = Props(new RoomChannelGroupActor())
 }
 
-class RoomChannelGroupActor(channelGroup: ChannelGroup) extends Actor {
+class RoomChannelGroupActor() extends Actor {
+
+  private val users: ListBuffer[ActorRef] = ListBuffer.empty[ActorRef]
+
   override def receive: Receive = {
 
-    case ChatRoomMessage.Join(user) => {
-      user ! ChatUserMessage.JoinRequest
+    case Create(userProps) => {
+      val user = context.actorOf(userProps)
+      user ! Join
     }
 
-    case ChatUserMessage.JoinChannel(channel) => {
-      channelGroup.add(channel)
-      self ! Broadcast(Message.joined(channel.id().asShortText()))
+    case Joined(newUser, username) => {
+      users += newUser
+      context.watch(newUser)
+      self ! Broadcast(Message.joined(username.value))
     }
 
-    case ChatRoomMessage.Quit(user) => {
-      user ! ChatUserMessage.QuitRequest
+    case broadcast @ Broadcast(_) => {
+      users.foreach { user =>
+        user ! broadcast
+      }
     }
+//
+//    case ChatRoomMessage.Quit(user) => {
+//      user ! ChatUserMessage.QuitRequest
+//    }
+//
+//    case ChatUserMessage.QuitChannel(channel, user) => {
+//      channelGroup.remove(channel)
+//      user ! PoisonPill
+//      self ! Broadcast(Message.quit(channel.id().asShortText()))
+//    }
 
-    case ChatUserMessage.QuitChannel(channel, user) => {
-      channelGroup.remove(channel)
-      user ! PoisonPill
-      self ! Broadcast(Message.quit(channel.id().asShortText()))
-    }
-
-    case ChatRoomMessage.Broadcast(message) => {
-      channelGroup.writeAndFlush(new TextWebSocketFrame(message))
-    }
   }
 }

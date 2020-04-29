@@ -9,6 +9,7 @@ import io.netty.handler.stream.ChunkedWriteHandler
 class ChatUserChannelInitializer(context: ActorContext) extends ChannelInitializer[Channel] {
 
   override def initChannel(c: Channel): Unit = {
+    println("ecq init")
     val pipeline = c.pipeline()
     pipeline.addLast(new HttpServerCodec())
     pipeline.addLast(new ChunkedWriteHandler())

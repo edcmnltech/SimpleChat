@@ -5,6 +5,8 @@ import com.simplechat.repository.{ChatRoomName, ChatUsername}
 object UrlHelper {
 
   val WS_PATH = "/ws"
+  val CHAT_ROOM_PATH = "/chatrooms"
+  val CHAT_ROOM_PAGE_PATH = "/views/chat-rooms.html"
   val USER_PATH = "/user/"
   val ROOM_PATH = "/room/"
 

@@ -1,14 +1,18 @@
 package com.simplechat.netty.handler
 
+import java.io.{File, RandomAccessFile}
+
 import akka.actor.ActorContext
-import com.simplechat.actor.RoomChannelGroups
-import com.simplechat.adapter.{RoomChannelGroupActor, UserChannelActor}
+import com.simplechat.actor.{RoomChannelGroups, UserActor}
+import com.simplechat.adapter.{ConnectionActor, RoomChannelGroupActor}
 import com.simplechat.netty.{AttrHelper, UrlHelper}
 import com.simplechat.repository._
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.handler.codec.http._
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
+import io.netty.handler.ssl.SslHandler
+import io.netty.handler.stream.ChunkedNioFile
 import io.netty.util.concurrent.GlobalEventExecutor
 
 import scala.concurrent.Await
@@ -29,16 +33,17 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
           val validChatRoom: ChatRoom = extractChatRoom(ctx, request)
           val validChatUser: ChatUser = extractChatUser(ctx, request)
 
-          val chatRoomChannelGroup = RoomChannelGroups.chatRooms.find(_.name() == validChatRoom.name.value).getOrElse(new DefaultChannelGroup(GlobalEventExecutor.INSTANCE))
-          val chatRoomActorProps = RoomChannelGroupActor.props(chatRoomChannelGroup)
-          val chatRoomActorRef = actorContext.actorOf(chatRoomActorProps)
-          val chatUserActorRef = actorContext.actorOf(UserChannelActor.props(ctx.channel()))
+          val chatRoomChannelGroup = RoomChannelGroups.chatRoomGroupFor(validChatRoom.name)
+          val chatRoomActorRef = RoomChannelGroups.actorRefFor(validChatRoom.name)
+
+          val connActorProps = ConnectionActor.props(ctx.channel())
+          val userActorProps = UserActor.props(connActorProps, validChatUser.username)
 
           duplicateChannelCheck(chatRoomChannelGroup, validChatUser, actorContext)
           AttrHelper.setUsername(ctx.channel(), validChatUser.username)
 
           ctx.pipeline().addLast(new WebSocketServerProtocolHandler(request.uri()))
-          ctx.pipeline().addLast(new ChatWebSocketFrameHandler(actorContext, chatRoomActorRef, chatUserActorRef))
+          ctx.pipeline().addLast(new ChatWebSocketFrameHandler(chatRoomActorRef, userActorProps))
           ctx.fireChannelRead(request.retain())
         } else {
           println("no chat room found in url.")
@@ -48,6 +53,8 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
         println("no user found in url.")
         ctx.close()
       }
+    } else if(request.uri().equalsIgnoreCase(UrlHelper.CHAT_ROOM_PATH)) {
+      loadChatRoomPage(ctx, request)
     } else {
       println("invalid ws url.")
       ctx.close()
@@ -86,5 +93,28 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
       }
     }
   }
+
+  protected def loadChatRoomPage(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
+    val url = getClass.getResource(UrlHelper.CHAT_ROOM_PAGE_PATH)
+    val filePath = new File(url.getPath)
+    val file = new RandomAccessFile(filePath, "r")
+    val response = new DefaultHttpResponse(request.protocolVersion(), HttpResponseStatus.OK)
+    response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, file.length())
+    val keepAlive = HttpHeaders.isKeepAlive(request)
+    if (keepAlive) {
+      response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE)
+    }
+    ctx.write(response)
+    if (ctx.pipeline().get(classOf[SslHandler]) == null) {
+      ctx.write(new DefaultFileRegion(file.getChannel, 0, file.length()))
+    } else {
+      ctx.write(new ChunkedNioFile(file.getChannel))
+    }
+    val future = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+    if (!keepAlive) {
+      future.addListener(ChannelFutureListener.CLOSE)
+    }
+  }
+
 
 }
