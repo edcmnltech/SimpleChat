@@ -1,40 +1,41 @@
 package com.simplechat.adapter
 
-import akka.actor.{ActorContext, ActorRef}
+import akka.actor.{ActorContext, ActorRef, PoisonPill}
 import com.simplechat.actor.ChatRoomActor
-import com.simplechat.repository.{ChatRoomName, ChatUsername}
-import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
-import io.netty.util.concurrent.GlobalEventExecutor
+import com.simplechat.repository.{ChatRoomName, ChatRoomRepository, MySqlRepository}
 
 import scala.collection.mutable
+import scala.concurrent.Future
 
-object ChatRooms {
+object ChatRooms extends ChatRoomRepository with MySqlRepository {
 
   /**
    * In the future ChannelGroup shall be created based on
    * the number of ChatRoom in the database.
    */
-  private val chatRooms = List(
-    new DefaultChannelGroup("chat1", GlobalEventExecutor.INSTANCE),
-    new DefaultChannelGroup("chat2", GlobalEventExecutor.INSTANCE)
-  )
 
-  private val chatRoomActorRefs: mutable.Map[ChatRoomName, (ChannelGroup, ActorRef)] = mutable.Map.empty
+  private val chatRoomActorRefs: mutable.Map[ChatRoomName, ActorRef] = mutable.Map.empty
 
-  def create(actorContext: ActorContext): Unit = {
-    chatRooms.foreach { group =>
+  private def create(actorContext: ActorContext, roomName: ChatRoomName): Future[ActorRef] = {
+    selectByRoomName(roomName).map { foundRoom =>
       val actorRef = actorContext.actorOf(ChatRoomActor.props)
-      val mapEntry = new ChatRoomName(group.name()) -> (group, actorRef)
+      val mapEntry = foundRoom.name -> actorRef
       chatRoomActorRefs += mapEntry
-    }
+      actorRef
+    }(ec)
   }
 
   def close(): Unit = {
-    chatRooms.foreach { group =>
-      group.close()
+    chatRoomActorRefs.foreach { case (_, chatRoomActorRef) =>
+      chatRoomActorRef ! PoisonPill
     }
   }
 
-  def actorRefFor(key: ChatRoomName): ActorRef = chatRoomActorRefs(key)._2
+  def actorRefFor(actorContext: ActorContext, roomName: ChatRoomName): Future[ActorRef] = {
+    chatRoomActorRefs.find(roomName == _._1) match {
+      case Some(value) => Future.successful(value._2)
+      case None => create(actorContext, roomName)
+    }
+  }
 }
 

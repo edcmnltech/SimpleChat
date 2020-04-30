@@ -2,10 +2,10 @@ package com.simplechat.netty.handler
 
 import java.io.{File, RandomAccessFile}
 
-import akka.actor.ActorContext
+import akka.actor.{ActorContext, ActorRef, Props}
 import com.simplechat.actor.UserActor
 import com.simplechat.adapter.ChatRooms
-import com.simplechat.netty.{AttrHelper, UrlHelper}
+import com.simplechat.netty.helper.{AttrHelper, UrlHelper}
 import com.simplechat.repository._
 import io.netty.channel._
 import io.netty.channel.group.ChannelGroup
@@ -14,9 +14,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
 import io.netty.handler.ssl.SslHandler
 import io.netty.handler.stream.ChunkedNioFile
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import scala.util.{Success, Try}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends SimpleChannelInboundHandler[FullHttpRequest]
   with MySqlRepository
@@ -25,19 +24,32 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
 
   override def channelRead0(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
 
-    if (request.uri().contains(UrlHelper.WS_PATH)) {
-      if (request.uri().contains(UrlHelper.USER_PATH)) {
-        if (request.uri().contains(UrlHelper.ROOM_PATH)) {
+    val requestUri = request.uri()
 
-          val validChatRoom: ChatRoom = extractChatRoom(ctx, request)
-          val validChatUser: ChatUser = extractChatUser(ctx, request)
+    if (requestUri.contains(UrlHelper.WS_PATH)) {
+      if (requestUri.contains(UrlHelper.USER_PATH)) {
+        if (requestUri.contains(UrlHelper.ROOM_PATH)) {
 
-          val userActorProps = UserActor.props(validChatUser.username)
-          val chatRoomActorRef = ChatRooms.actorRefFor(validChatRoom.name)
+          implicit val nec: ExecutionContext = ExecutionContext.fromExecutor(ctx.executor())
+          request.retain()
 
-          ctx.pipeline().addLast(new WebSocketServerProtocolHandler(request.uri()))
-          ctx.pipeline().addLast(new ChatWebSocketFrameHandler(chatRoomActorRef, userActorProps, validChatUser.username, actorContext))
-          ctx.fireChannelRead(request.retain())
+          val futureChatRoomActorRef: Future[(ActorRef, Props, ChatUsername)] = for {
+            validChatRoom <- extractChatRoom(ctx, request)
+            validChatUser <- extractChatUser(ctx, request)
+            userActorProps = UserActor.props(validChatUser.username)
+            chatRoomActorRef <- ChatRooms.actorRefFor(actorContext, validChatRoom.name)
+          } yield (chatRoomActorRef, userActorProps, validChatUser.username)
+
+          futureChatRoomActorRef.onComplete {
+            case Success((chatRoomActorRef, userActorProps, username)) =>
+              ctx.pipeline().addLast(new WebSocketServerProtocolHandler(request.uri()))
+              ctx.pipeline().addLast(new ChatWebSocketFrameHandler(chatRoomActorRef, userActorProps, username, actorContext))
+              ctx.fireChannelRead(request)
+            case Failure(exception) =>
+              //possible hook for returning the error
+              println(s"failed to create chatroom caused by: ${exception.getMessage}")
+              Future(ctx.close())
+          }
         } else {
           println("no chat room found in url.")
           ctx.close()
@@ -63,14 +75,14 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
 
   override def channelUnregistered(ctx: ChannelHandlerContext): Unit = super.channelUnregistered(ctx)
 
-  protected def extractChatUser(ctx: ChannelHandlerContext, request: FullHttpRequest): ChatUser = {
+  protected def extractChatUser(ctx: ChannelHandlerContext, request: FullHttpRequest): Future[ChatUser] = {
     val chatUser = UrlHelper.getChatUsername(request.uri())
-    Await.result(selectByUsername(chatUser), 2.seconds)
+    selectByUsername(chatUser)
   }
 
-  protected def extractChatRoom(ctx: ChannelHandlerContext, request: FullHttpRequest): ChatRoom = {
+  protected def extractChatRoom(ctx: ChannelHandlerContext, request: FullHttpRequest): Future[ChatRoom] = {
     val chatRoom = UrlHelper.getChatRoomName(request.uri())
-    Await.result(selectByRoomName(chatRoom), 2.seconds)
+    selectByRoomName(chatRoom)
   }
 
   protected def duplicateChannelCheck(chatRoomChannelGroup: ChannelGroup, user: ChatUser, actorContext: ActorContext): Unit = {

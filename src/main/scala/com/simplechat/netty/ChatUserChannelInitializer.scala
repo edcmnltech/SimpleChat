@@ -2,6 +2,7 @@ package com.simplechat.netty
 
 import akka.actor.ActorContext
 import com.simplechat.netty.handler.HttpRequestHandler
+import com.simplechat.netty.helper.UrlHelper
 import io.netty.channel.{Channel, ChannelInitializer}
 import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 import io.netty.handler.stream.ChunkedWriteHandler

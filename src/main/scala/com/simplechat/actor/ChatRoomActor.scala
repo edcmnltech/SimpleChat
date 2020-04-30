@@ -1,6 +1,6 @@
 package com.simplechat.actor
 
-import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props, Terminated}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import com.simplechat.protocol.ChatProtocol.{Reconnect, _}
 import com.simplechat.repository.ChatUsername
 
@@ -22,7 +22,7 @@ class ChatRoomActor() extends Actor with ActorLogging {
           val newConnector = createConnector(oldUser)
           oldUser ! Reconnect(newConnector, self)
         case None =>
-          val (newUser, newConnector) = creatttt(username, userProps, createConnector)
+          val (newUser, newConnector) = createNewActors(username, userProps, createConnector)
           users += (username -> newUser)
           newUser ! Join(newConnector, self)
       }
@@ -59,9 +59,9 @@ class ChatRoomActor() extends Actor with ActorLogging {
     users.find(_._1 == username)
   }
 
-  private def creatttt(username: ChatUsername, userProps: Props, createConnector: UserThenConnectorClosure): (ActorRef, ActorRef) = {
-    val newUser = context.actorOf(userProps, s"user_$username")
-    val connector = createConnector(newUser)
-    (newUser, connector)
+  private def createNewActors(username: ChatUsername, userProps: Props, createConnector: UserThenConnectorClosure): (ActorRef, ActorRef) = {
+    val newUser: ActorRef = context.actorOf(userProps, s"user_$username")
+    val newConnector: ActorRef = createConnector.apply(newUser)
+    (newUser, newConnector)
   }
 }

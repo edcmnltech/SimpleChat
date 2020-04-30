@@ -2,7 +2,7 @@ package com.simplechat.netty.handler
 
 import akka.actor.{ActorContext, ActorRef, Props}
 import com.simplechat.adapter.ConnectionActor
-import com.simplechat.netty.AttrHelper
+import com.simplechat.netty.helper.AttrHelper
 import com.simplechat.protocol.ChatProtocol._
 import com.simplechat.repository.ChatUsername
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}

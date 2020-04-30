@@ -1,4 +1,4 @@
-package com.simplechat.netty
+package com.simplechat.netty.helper
 
 import akka.actor.ActorRef
 import com.simplechat.repository.{ChatRoomName, ChatUsername}
