@@ -10,22 +10,21 @@ object UserActor {
 
 class UserActor(username: ChatUsername) extends Actor with ActorLogging {
 
-  override def receive: Receive = join
+  override def receive: Receive = connect
 
-  private def join: Receive = {
-    case a: Joint =>
-      a match {
+  private def connect: Receive = {
+    case conn: Connection => {
+      conn match {
         case Join(connector, replyTo) =>
           println("joining...")
           replyTo ! Joined(self, username)
           context.become(connected(connector))
-
         case Rejoin(connector, replyTo) =>
           println("rejoining...")
-          replyTo ! Joined(self, username)
+          replyTo ! Reconnected(self, username)
           context.become(connected(connector))
       }
-
+    }
   }
 
   private def connected(connector: ActorRef): Receive = {
@@ -37,7 +36,7 @@ class UserActor(username: ChatUsername) extends Actor with ActorLogging {
     case Reconnect(newConnector, replyTo) =>
       println("reconnecting...")
       connector ! PoisonPill
-      context.become(join)
+      context.become(connect)
       self ! Rejoin(newConnector, replyTo)
   }
 }

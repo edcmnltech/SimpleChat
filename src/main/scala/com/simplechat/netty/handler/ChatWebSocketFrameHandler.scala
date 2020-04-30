@@ -12,15 +12,15 @@ class ChatWebSocketFrameHandler(chatRoom: ActorRef, userProps: Props, username: 
 
   override def userEventTriggered(ctx: ChannelHandlerContext, evt: Any): Unit = {
     if (evt == WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE) {
-      val createConnector: UserThenConnector = userActorRef => {
+      val createConnectorClosure: UserThenConnectorClosure = userActorRef => {
         val connActorProps = ConnectionActor.props(ctx.channel(), username)(userActorRef)
-        val connActorRef = actorContext.actorOf(connActorProps, s"connector_${ctx.channel.id()}_${username.value}")
+        val connActorName = s"connector_${ctx.channel.id()}_${username.value}"
+        val connActorRef = actorContext.actorOf(connActorProps, connActorName)
         AttrHelper.setUsername(ctx.channel(), username)
         connActorRef
       }
-      chatRoom ! CreateUser(userProps, username, createConnector)
+      chatRoom ! CreateUser(userProps, username, createConnectorClosure)
     } else {
-      println("else in userEventTriggered")
       super.userEventTriggered(ctx, evt)
     }
 
@@ -31,9 +31,7 @@ class ChatWebSocketFrameHandler(chatRoom: ActorRef, userProps: Props, username: 
   }
 
   override def channelUnregistered(ctx: ChannelHandlerContext): Unit = {
-    println("unregistering...")
-    val userActorRef = AttrHelper.getUsername(ctx.channel())
-    chatRoom ! Quit(userActorRef)
+    println(s"unregistering... ${ctx.channel().id()}")
     ctx.close()
   }
 

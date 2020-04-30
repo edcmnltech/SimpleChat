@@ -59,7 +59,7 @@ class ChatRoomActor() extends Actor with ActorLogging {
     users.find(_._1 == username)
   }
 
-  private def creatttt(username: ChatUsername, userProps: Props, createConnector: UserThenConnector): (ActorRef, ActorRef) = {
+  private def creatttt(username: ChatUsername, userProps: Props, createConnector: UserThenConnectorClosure): (ActorRef, ActorRef) = {
     val newUser = context.actorOf(userProps, s"user_$username")
     val connector = createConnector(newUser)
     (newUser, connector)
