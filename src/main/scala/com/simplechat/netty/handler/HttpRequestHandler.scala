@@ -33,7 +33,7 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
           implicit val nec: ExecutionContext = ExecutionContext.fromExecutor(ctx.executor())
           request.retain()
 
-          //loadChatRoomPage(ctx, request)
+//          loadChatClientPage(ctx, request)
 
           val futureChatRoomActorRef: Future[(ActorRef, Props, ChatUsername)] = for {
             validChatRoom <- extractChatRoom(ctx, request)
@@ -60,10 +60,19 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
         println("no user found in url.")
         ctx.close()
       }
-    } else if(request.uri().equalsIgnoreCase(UrlHelper.CHAT_ROOM_PATH)) {
-      loadChatRoomPage(ctx, request)
+    } else if(requestUri.contains(UrlHelper.CHAT_CLIENT)) {
+
+      val urlParams = UrlHelper.getUrlParams(requestUri)
+      val mapParams = UrlHelper.convertParamsToMap(urlParams)
+      val idParam = UrlHelper.findValueOfParam("id", mapParams)
+      val roomParam = UrlHelper.findValueOfParam("room", mapParams)
+
+      println(s"idParam $idParam, roomParam $roomParam")
+
+      loadChatClientPage(ctx, request)
+    } else if(requestUri.equalsIgnoreCase(UrlHelper.ALL_CHAT_ROOMS)) {
+      loadAllChatRoomsPage(ctx, request)
     } else {
-      println("invalid ws url.")
       ctx.close()
     }
   }
@@ -101,8 +110,8 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
     }
   }
 
-  protected def loadChatRoomPage(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
-    val url = getClass.getResource(UrlHelper.CHAT_ROOM_PAGE_PATH)
+  protected def loadAllChatRoomsPage(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
+    val url = getClass.getResource(UrlHelper.ALL_CHAT_ROOM_PAGE_PATH)
     val filePath = new File(url.getPath)
     val file = new RandomAccessFile(filePath, "r")
     val response = new DefaultHttpResponse(request.protocolVersion(), HttpResponseStatus.OK)
@@ -123,5 +132,26 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
     }
   }
 
+  protected def loadChatClientPage(ctx: ChannelHandlerContext, request: FullHttpRequest): Unit = {
+    val url = getClass.getResource(UrlHelper.CHAT_CLIENT_PAGE)
+    val filePath = new File(url.getPath)
+    val file = new RandomAccessFile(filePath, "r")
+    val response = new DefaultHttpResponse(request.protocolVersion(), HttpResponseStatus.OK)
+    response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, file.length())
+    val keepAlive = HttpHeaders.isKeepAlive(request)
+    if (keepAlive) {
+      response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE)
+    }
+    ctx.write(response)
+    if (ctx.pipeline().get(classOf[SslHandler]) == null) {
+      ctx.write(new DefaultFileRegion(file.getChannel, 0, file.length()))
+    } else {
+      ctx.write(new ChunkedNioFile(file.getChannel))
+    }
+    val future = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT)
+    if (!keepAlive) {
+      future.addListener(ChannelFutureListener.CLOSE)
+    }
+  }
 
 }

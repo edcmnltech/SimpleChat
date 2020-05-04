@@ -12,6 +12,7 @@ import io.netty.handler.logging.{LogLevel, LoggingHandler}
 
 object Network {
   val port = 8080
+  val restPort = 8081
   val host = InetAddress.getByName("0.0.0.0")
   val address = new InetSocketAddress(host, port)
 }

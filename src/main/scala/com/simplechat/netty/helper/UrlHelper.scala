@@ -2,11 +2,16 @@ package com.simplechat.netty.helper
 
 import com.simplechat.repository.{ChatRoomName, ChatUsername}
 
+import scala.collection.Map
+import scala.util.Try
+
 object UrlHelper {
 
   val WS_PATH = "/ws"
-  val CHAT_ROOM_PATH = "/chatrooms"
-  val CHAT_ROOM_PAGE_PATH = "/views/chat-rooms.html"
+  val ALL_CHAT_ROOMS = "/chatrooms"
+  val ALL_CHAT_ROOM_PAGE_PATH = "/views/chat-rooms.html"
+  val CHAT_CLIENT = "chat-client"
+  val CHAT_CLIENT_PAGE = "/views/chat-client.html"
   val USER_PATH = "/user/"
   val ROOM_PATH = "/room/"
 
@@ -30,6 +35,19 @@ object UrlHelper {
     if (params.size != 1) {
       new ChatRoomName(params.last)
     } else new ChatRoomName("")
+  }
+
+  def convertParamsToMap(params: List[String]): List[Map[String, String]] = {
+    params.map { p =>
+      val split: List[String] = p.split("=").toList
+      split match {
+        case k :: v if v.size == 1 => Map(k -> v.head)
+      }
+    }
+  }
+
+  def findValueOfParam(key: String, map: List[Map[String, String]]): Option[String] = {
+    map find { _.contains(key) } map { found => found(key) }
   }
 
 }

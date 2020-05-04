@@ -55,9 +55,9 @@
     // var last = chatroom[chatroom.length - 1];
 
     // var url = "http://192.168.147.165:8080"
-    var url = "http://0.0.0.0:8080"
+    var url = "http://0.0.0.0:8081"
     // var ws = "192.168.147.165:8080"
-    var ws = "0.0.0.0:8080"
+    var ws = "0.0.0.0:8081"
     var post_url = url+"/auth"
 
     var $messages = $("#messages"),
@@ -86,7 +86,8 @@
 
                 // var addr = 'ws://test:1234@'+ws+'/chatid/'+chatRoomId+'/chatname/'+chatRoomName+'/nickname/'+$nickname.val();
                 // ws://localhost:8080/ws/user/eli/room/chat2
-                var addr = 'ws://localhost:8080/ws/user/'+$nickname.val()+'/room/'+chatRoomName;
+                //var addr = 'ws://localhost:8080/ws/user/'+$nickname.val()+'/room/'+chatRoomName;
+                var addr = 'ws://0.0.0.0:8080/ws/user/'+$nickname.val()+'/room/'+chatRoomName;
                 var connection = new WebSocket(addr);
 
                 console.log("opening websocket...");
@@ -115,13 +116,13 @@
                         connection.send(text)
                     })
                 }
-                connection.onerror = function (error) { 
-                    $join.prop("disabled", false);
-                    $join.html("Join")
-                    var msg = "A chat instance for user '"+$nickname.val()+"' is already opened.";
-                    console.log(msg);
-                    createAlert(msg);
-                }
+                //connection.onerror = function (error) {
+                //    $join.prop("disabled", false);
+                //    $join.html("Join")
+                //    var msg = "A chat instance for user '"+$nickname.val()+"' is already opened.";
+                //    console.log(msg);
+                //    createAlert(msg);
+                //}
                 connection.onmessage = function (event) {
                     $messages.append($("<li class='list-group-item'>" + event.data + "</li>"))
                     document.getElementById('messages').lastChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
