@@ -14,6 +14,7 @@ class ChatUserChannelInitializer(context: ActorContext) extends ChannelInitializ
     val pipeline = c.pipeline()
     pipeline.addLast(new HttpServerCodec())
     pipeline.addLast(new ChunkedWriteHandler())
+    pipeline.addLast(new TextWebSocketFrameEncoder())
     pipeline.addLast(new HttpObjectAggregator(64 * 1024))
     pipeline.addLast(new HttpRequestHandler(UrlHelper.WS_PATH, context))
   }

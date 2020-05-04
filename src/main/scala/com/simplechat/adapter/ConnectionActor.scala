@@ -4,7 +4,6 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import com.simplechat.protocol.ChatProtocol.OutgoingMessage
 import com.simplechat.repository.ChatUsername
 import io.netty.channel.Channel
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
 
 object ConnectionActor {
   def props(channel: Channel, username: ChatUsername)(userActorRef: ActorRef): Props =
@@ -15,7 +14,7 @@ class ConnectionActor(channel: Channel, username: ChatUsername, userActorRef: Ac
 
   override def receive: Receive = {
     case OutgoingMessage(msg) =>
-      channel.writeAndFlush(new TextWebSocketFrame(s"${username.value}: $msg"))
+      channel.writeAndFlush(s"${username.value}: $msg")
   }
 
   override def postStop(): Unit = {
