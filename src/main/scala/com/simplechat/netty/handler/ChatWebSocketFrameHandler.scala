@@ -27,7 +27,9 @@ class ChatWebSocketFrameHandler(chatRoom: ActorRef, userProps: Props, username: 
   }
 
   override def channelRead0(ctx: ChannelHandlerContext, msg: TextWebSocketFrame): Unit = {
-    chatRoom ! IncomingMessage(msg.text())
+    if (!msg.text().isBlank) {
+      chatRoom ! ChatMessage(s"${username.value}: ${msg.text()}")
+    }
   }
 
   override def channelUnregistered(ctx: ChannelHandlerContext): Unit = {

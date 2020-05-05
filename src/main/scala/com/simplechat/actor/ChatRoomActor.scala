@@ -30,14 +30,14 @@ class ChatRoomActor() extends Actor with ActorLogging {
 
     case Joined(newUser, username) => {
       context.watch(newUser)
-      self ! IncomingMessage(Message.joined(username.value))
+      self ! Message.joined(username.value)
     }
 
     case Reconnected(_, username) => {
-      self ! IncomingMessage(Message.reconnected(username.value))
+      self ! Message.reconnected(username.value)
     }
 
-    case broadcast @ IncomingMessage(_) => {
+    case broadcast: IncomingMessage => {
       log.debug("Broadcasting...")
       users.foreach { case (_, user) =>
         user ! broadcast
@@ -47,7 +47,7 @@ class ChatRoomActor() extends Actor with ActorLogging {
     case Quit(username) => {
       log.debug("Quitting...")
       users.remove(username).foreach { user =>
-        self ! IncomingMessage(Message.quit(username.value))
+        self ! Message.quit(username.value)
         context.unwatch(user)
         user ! Quit(username)
       }

@@ -37,7 +37,7 @@
                 <h3 for="message" class="mr-3">Type Message:</h3>
             </div>
             <div class="d-flex flex-row-reverse mt-3">
-                <a href="chat-rooms.html" class="btn btn-outline-primary btn-lg">Other chat rooms...</a>
+                <a href="/chatrooms" class="btn btn-outline-primary btn-lg">Other chat rooms...</a>
             </div>
         </div>
         
@@ -76,6 +76,8 @@
         $(".container").prepend(alert);
     }
 
+    var connection;
+
     $("#joinRoomForm").submit(function(event){
         event.preventDefault();
         $.ajax({
@@ -88,7 +90,7 @@
                 // ws://localhost:8080/ws/user/eli/room/chat2
                 //var addr = 'ws://localhost:8080/ws/user/'+$nickname.val()+'/room/'+chatRoomName;
                 var addr = 'ws://0.0.0.0:8080/ws/user/'+$nickname.val()+'/room/'+chatRoomName;
-                var connection = new WebSocket(addr);
+                connection = new WebSocket(addr);
 
                 console.log("opening websocket...");
                 $join.html("<span class='spinner-grow spinner-grow-sm' role='status' aria-hidden='true'></span>"+
@@ -107,25 +109,38 @@
                     $password.hide();
                     $('.alert').fadeOut();
 
-                    $messages.append($("<li class='list-group-item'>Connected</li>"));
+                    //$messages.append($("<li class='list-group-item'>Connected</li>"));
                     $nickname.prop("disabled", true);
 
                     $send.on('click', function() {
-                        var text = $message.val()
-                        $message.val("")
-                        connection.send(text)
+                        connection.send($message.val());
+                        $message.val("");
                     })
                 }
-                //connection.onerror = function (error) {
-                //    $join.prop("disabled", false);
-                //    $join.html("Join")
-                //    var msg = "A chat instance for user '"+$nickname.val()+"' is already opened.";
-                //    console.log(msg);
-                //    createAlert(msg);
-                //}
+                connection.onerror = function (error) {
+                    //$join.prop("disabled", false);
+                    //$join.html("Join")
+                    //var msg = "A chat instance for user '"+$nickname.val()+"' is already opened.";
+                    console.log(msg);
+                    createAlert(msg);
+                }
                 connection.onmessage = function (event) {
                     $messages.append($("<li class='list-group-item'>" + event.data + "</li>"))
                     document.getElementById('messages').lastChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+                connection.onclose = function(reasonCode, description) {
+                    console.log("websocket closed...");
+
+                    $join.prop("disabled", false);
+                    $join.html("Join")
+                    $join.removeClass('btn-danger');
+                    $join.addClass('btn-success');
+                    $send.prop("disabled", true);
+                    $password.prop("disabled", false);
+                    $password.val("");
+                    $password.show();
+                    $nickname.prop("disabled", false);
+                    createAlert("Channel has been closed.");
                 }
             },
             error: function(jqXHR, textStatus, errorThrown) {

@@ -33,8 +33,6 @@ class HttpRequestHandler(wsUri: String, actorContext: ActorContext) extends Simp
           implicit val nec: ExecutionContext = ExecutionContext.fromExecutor(ctx.executor())
           request.retain()
 
-//          loadChatClientPage(ctx, request)
-
           val futureChatRoomActorRef: Future[(ActorRef, Props, ChatUsername)] = for {
             validChatRoom <- extractChatRoom(ctx, request)
             validChatUser <- extractChatUser(ctx, request)

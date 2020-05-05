@@ -28,7 +28,9 @@ class UserActor(username: ChatUsername) extends Actor with ActorLogging {
   }
 
   private def connected(connector: ActorRef): Receive = {
-    case IncomingMessage(msg) =>
+    case InfoMessage(msg) =>
+      connector ! OutgoingMessage(msg)
+    case ChatMessage(msg) =>
       connector ! OutgoingMessage(msg)
     case Quit(_) =>
       connector ! PoisonPill

@@ -9,9 +9,12 @@ object ChatProtocol {
   sealed trait ChatProtocol
   sealed abstract class Connection(listener: ActorRef, replyTo: ActorRef) extends ChatProtocol
 
-  case class CreateUser(user: Props, username: ChatUsername, userThenConnectorClosure: UserThenConnectorClosure) extends ChatProtocol
-  case class IncomingMessage(msg: String) extends ChatProtocol
+  sealed trait IncomingMessage extends ChatProtocol
+  case class ChatMessage(msg: String) extends IncomingMessage
+  case class InfoMessage(msg: String) extends IncomingMessage
   case class OutgoingMessage(msg: String) extends ChatProtocol
+
+  case class CreateUser(user: Props, username: ChatUsername, userThenConnectorClosure: UserThenConnectorClosure) extends ChatProtocol
   case class Quit(username: ChatUsername) extends ChatProtocol
   case class Reconnect(connector: ActorRef, replyTo: ActorRef) extends ChatProtocol
   case class Reconnected(self: ActorRef, username: ChatUsername) extends ChatProtocol
