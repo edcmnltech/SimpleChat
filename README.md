@@ -1,11 +1,18 @@
 ## Updates
-##### 2020-04-22
-- `Channel` is embedded into an Actor's Props
-- `ChannelGroup` is embedded into an Actor's Props
+##### 2020-05-05
+- Attached the UI
+
+##### 2020-05-04
+- Added Akka HTTP for JSON API
+
 ##### 2020-04-29
 - Unused `ChannelGroup` and opted to use simple `Map[ActorRef]` for tracking members of a `ChatRoom`
 - `ConnectionActor` is used as output channel of the `UserActor` 
 - Added `UserToConnector`, a function value parameter when creating a `ConnectionActor`
+
+##### 2020-04-22
+- `Channel` is embedded into an Actor's Props
+- `ChannelGroup` is embedded into an Actor's Props
 
 ## Notes
 - Remember to wrap 'message' with TextWebFramewSocket before firing 'writeAndFlush' to a Channel or ChannelGroup
