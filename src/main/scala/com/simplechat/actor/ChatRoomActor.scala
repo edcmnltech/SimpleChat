@@ -13,6 +13,7 @@ object ChatRoomActor {
 class ChatRoomActor() extends Actor with ActorLogging {
 
   private val users: mutable.Map[ChatUsername, ActorRef] = mutable.Map.empty
+  private val chatRoomBus = new ChatRoomBusImpl
 
   override def receive: Receive = {
 
@@ -30,7 +31,9 @@ class ChatRoomActor() extends Actor with ActorLogging {
 
     case Joined(newUser, username) => {
       context.watch(newUser)
-      self ! Message.joined(username.value)
+      chatRoomBus.subscribe(newUser, "info")
+      chatRoomBus.publish(IncomingMessageEnvelope("info", Message.joined(username.value)))
+      //self ! Message.joined(username.value)
     }
 
     case Reconnected(_, username) => {
@@ -39,9 +42,11 @@ class ChatRoomActor() extends Actor with ActorLogging {
 
     case broadcast: IncomingMessage => {
       log.debug("Broadcasting...")
-      users.foreach { case (_, user) =>
-        user ! broadcast
-      }
+      chatRoomBus.publish(IncomingMessageEnvelope("info", broadcast))
+//
+//      users.foreach { case (_, user) =>
+//        user ! broadcast
+//      }
     }
 
     case Quit(username) => {

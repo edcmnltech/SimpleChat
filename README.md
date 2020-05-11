@@ -1,4 +1,7 @@
 ## Updates
+##### 2020-05-11
+- Moved to Event Bus
+
 ##### 2020-05-05
 - Attached the UI
 
@@ -29,3 +32,5 @@ In all other cases ActorRefs can be provided during Actor creation or initializa
 ## References
 ##### 2020-04-29
 _Good Actor Design:_ https://www.oreilly.com/library/view/applied-akka-patterns/9781491934876/ch04.html
+_Event Bus:_ https://doc.akka.io/docs/akka/current/event-bus.html
+_Akka Event Bus:_ http://royvankaathoven.nl/blog/akka-event-bus
